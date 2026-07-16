@@ -159,6 +159,44 @@ def dns_statistics(packets):
     return dict(dns_counter)
 
 
+
+def tcp_flag_statistics(packets):
+    """
+    Подсчитывает количество TCP-флагов.
+    """
+
+    flag_counter = Counter()
+
+    FLAG_NAMES = {
+        "S": "SYN",
+        "SA": "SYN+ACK",
+        "A": "ACK",
+        "F": "FIN",
+        "FA": "FIN+ACK",
+        "R": "RST",
+        "RA": "RST+ACK",
+        "PA": "PSH+ACK",
+        "P": "PSH"
+    }
+
+    for packet in packets:
+
+        if packet.haslayer(TCP):
+
+            flags = packet.sprintf("%TCP.flags%")
+
+            flag_name = FLAG_NAMES.get(flags, flags)
+
+            flag_counter[flag_name] += 1
+
+    print("\n===== TCP FLAGS =====\n")
+
+    for flag, count in flag_counter.most_common():
+        print(f"{flag:<10} -> {count}")
+
+    return dict(flag_counter)
+
+
 def main():
 
     packets = read_pcap(PCAP_PATH)
@@ -170,6 +208,7 @@ def main():
     ip_statistics(packets)
     port_statistics(packets)
     dns_statistics(packets)
+    tcp_flag_statistics(packets)
 
 
 if __name__ == "__main__":
