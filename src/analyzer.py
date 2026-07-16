@@ -2,7 +2,7 @@ from pathlib import Path
 from scapy.all import rdpcap
 from scapy.layers.dns import DNS, DNSQR
 from scapy.layers.l2 import ARP
-from collections import Counter
+from collections import Counter, defaultdict
 from scapy.layers.inet import IP, TCP, UDP, ICMP
 
 
@@ -256,6 +256,58 @@ def suspicious_port_statistics(packets):
     }
 
 
+
+def port_scan_detection(packets):
+    """
+    Обнаруживает возможное TCP SYN Port Scan.
+    Один источник -> один получатель -> множество SYN на разные порты.
+    """
+
+    scans = defaultdict(set)
+
+    for packet in packets:
+
+        if (
+            packet.haslayer(IP)
+            and packet.haslayer(TCP)
+        ):
+
+            flags = packet.sprintf("%TCP.flags%")
+
+            # интересуют только SYN без ACK
+            if flags == "S":
+
+                src_ip = packet[IP].src
+                dst_ip = packet[IP].dst
+                dst_port = packet[TCP].dport
+
+                scans[(src_ip, dst_ip)].add(dst_port)
+
+    print("\n===== PORT SCAN DETECTION =====\n")
+
+    suspicious = {}
+
+    for (src_ip, dst_ip), ports in scans.items():
+
+        if len(ports) >= 10:
+
+            print(f"Источник: {src_ip}")
+            print(f"Назначение: {dst_ip}")
+            print(f"SYN на различных портов: {len(ports)}")
+            print(f"Порты: {sorted(ports)}")
+            print("Возможен TCP SYN Port Scan\n")
+
+            suspicious[f"{src_ip} -> {dst_ip}"] = {
+                "unique_ports": len(ports),
+                "ports": sorted(ports)
+            }
+
+    if not suspicious:
+        print("Признаков TCP SYN Port Scan не обнаружено.")
+
+    return suspicious
+
+
 def main():
 
     packets = read_pcap(PCAP_PATH)
@@ -269,6 +321,7 @@ def main():
     dns_statistics(packets)
     tcp_flag_statistics(packets)
     suspicious_port_statistics(packets)
+    port_scan_detection(packets)
 
 
 if __name__ == "__main__":
