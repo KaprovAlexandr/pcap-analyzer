@@ -5,10 +5,11 @@ from scapy.layers.dns import DNS, DNSQR
 from scapy.layers.l2 import ARP
 from collections import Counter, defaultdict
 from scapy.layers.inet import IP, TCP, UDP, ICMP
+from colorama import init, Fore, Style
 
 
 PCAP_PATH = Path("pcaps/sample.pcapng")
-
+init(autoreset=True)
 
 def read_pcap(path: Path):
     """
@@ -34,8 +35,31 @@ def export_report(report: dict, output_path: Path):
             ensure_ascii=False
         )
 
-    print(f"\nJSON отчет сохранен: {output_path}")
+    success(f"\nJSON отчет сохранен: {output_path}")
 
+
+def info(text):
+    print(Fore.CYAN + text)
+
+
+def success(text):
+    print(Fore.GREEN + text)
+
+
+def warning(text):
+    print(Fore.YELLOW + text)
+
+
+def danger(text):
+    print(Fore.RED + text)
+
+
+def header(text):
+    print(
+        Style.BRIGHT +
+        Fore.MAGENTA +
+        text
+    )
 
 
 def packet_statistics(packets):
@@ -65,9 +89,9 @@ def packet_statistics(packets):
         if packet.haslayer(DNS):
             stats["DNS"] += 1
 
-    print("\n===== Packet Statistics =====\n")
+    header("\n===== Packet Statistics =====\n")
 
-    print(f"Всего пакетов: {len(packets)}\n")
+    info(f"Всего пакетов: {len(packets)}\n")
 
     for protocol, count in stats.items():
         print(f"{protocol:<6}: {count}")
@@ -94,12 +118,12 @@ def ip_statistics(packets):
             src_counter[src_ip] += 1
             dst_counter[dst_ip] += 1
 
-    print("\n===== TOP SOURCE IP =====\n")
+    header("\n===== TOP SOURCE IP =====\n")
 
     for ip, count in src_counter.most_common(10):
         print(f"{ip:<20} -> {count}")
 
-    print("\n===== TOP DESTINATION IP =====\n")
+    header("\n===== TOP DESTINATION IP =====\n")
 
     for ip, count in dst_counter.most_common(10):
         print(f"{ip:<20} -> {count}")
@@ -131,12 +155,12 @@ def port_statistics(packets):
             src_ports[packet[UDP].sport] += 1
             dst_ports[packet[UDP].dport] += 1
 
-    print("\n===== TOP SOURCE PORTS =====\n")
+    header("\n===== TOP SOURCE PORTS =====\n")
 
     for port, count in src_ports.most_common(10):
         print(f"{port:<8} -> {count}")
 
-    print("\n===== TOP DESTINATION PORTS =====\n")
+    header("\n===== TOP DESTINATION PORTS =====\n")
 
     for port, count in dst_ports.most_common(10):
         print(f"{port:<8} -> {count}")
@@ -165,10 +189,10 @@ def dns_statistics(packets):
 
             dns_counter[domain] += 1
 
-    print("\n===== DNS REQUESTS =====\n")
+    header("\n===== DNS REQUESTS =====\n")
 
     if not dns_counter:
-        print("DNS-запросов не найдено.")
+        success("DNS-запросов не найдено.")
     else:
 
         for domain, count in dns_counter.most_common(10):
@@ -207,7 +231,7 @@ def tcp_flag_statistics(packets):
 
             flag_counter[flag_name] += 1
 
-    print("\n===== TCP FLAGS =====\n")
+    header("\n===== TCP FLAGS =====\n")
 
     for flag, count in flag_counter.most_common():
         print(f"{flag:<10} -> {count}")
@@ -255,10 +279,10 @@ def suspicious_port_statistics(packets):
             if dst_port in SUSPICIOUS_PORTS:
                 port_counter[dst_port] += 1
 
-    print("\n===== SUSPICIOUS PORTS =====\n")
+    header("\n===== SUSPICIOUS PORTS =====\n")
 
     if not port_counter:
-        print("Подозрительные порты не обнаружены.")
+        success("Подозрительные порты не обнаружены.")
 
     else:
 
@@ -301,7 +325,7 @@ def port_scan_detection(packets):
 
                 scans[(src_ip, dst_ip)].add(dst_port)
 
-    print("\n===== PORT SCAN DETECTION =====\n")
+    header("\n===== PORT SCAN DETECTION =====\n")
 
     suspicious = {}
 
@@ -313,7 +337,7 @@ def port_scan_detection(packets):
             print(f"Назначение: {dst_ip}")
             print(f"SYN на различных портов: {len(ports)}")
             print(f"Порты: {sorted(ports)}")
-            print("Возможен TCP SYN Port Scan\n")
+            warning("Возможен TCP SYN Port Scan\n")
 
             suspicious[f"{src_ip} -> {dst_ip}"] = {
                 "unique_ports": len(ports),
@@ -321,7 +345,7 @@ def port_scan_detection(packets):
             }
 
     if not suspicious:
-        print("Признаков TCP SYN Port Scan не обнаружено.")
+        success("Признаков TCP SYN Port Scan не обнаружено.")
 
     return suspicious
 
@@ -345,7 +369,7 @@ def dns_flood_detection(packets):
             src_ip = packet[IP].src
             dns_counter[src_ip] += 1
 
-    print("\n===== DNS FLOOD DETECTION =====\n")
+    header("\n===== DNS FLOOD DETECTION =====\n")
 
     suspicious = {}
 
@@ -357,12 +381,12 @@ def dns_flood_detection(packets):
 
             print(f"Источник: {ip}")
             print(f"DNS-запросов: {count}")
-            print("Возможен DNS Flood\n")
+            warning("Возможен DNS Flood\n")
 
             suspicious[ip] = count
 
     if not suspicious:
-        print("Признаков DNS Flood не обнаружено.")
+        success("Признаков DNS Flood не обнаружено.")
 
     return suspicious
 
@@ -391,7 +415,7 @@ def syn_flood_detection(packets):
             elif flags == "A":
                 ack_counter[src_ip] += 1
 
-    print("\n===== SYN FLOOD DETECTION =====\n")
+    header("\n===== SYN FLOOD DETECTION =====\n")
 
     suspicious = {}
 
@@ -410,7 +434,7 @@ def syn_flood_detection(packets):
             print(f"Источник: {ip}")
             print(f"SYN: {syn_count}")
             print(f"ACK: {ack_count}")
-            print("Обнаружены признаки TCP SYN Flood\n")
+            danger("Обнаружены признаки TCP SYN Flood\n")
 
             suspicious[ip] = {
                 "syn": syn_count,
@@ -418,7 +442,7 @@ def syn_flood_detection(packets):
             }
 
     if not suspicious:
-        print("Признаков TCP SYN Flood не обнаружено.")
+        success("Признаков TCP SYN Flood не обнаружено.")
 
     return suspicious
 
@@ -427,8 +451,8 @@ def main():
 
     packets = read_pcap(PCAP_PATH)
 
-    print(f"Файл успешно открыт: {PCAP_PATH}")
-    print(f"Всего пакетов: {len(packets)}")
+    success(f"Файл успешно открыт: {PCAP_PATH}")
+    info(f"Всего пакетов: {len(packets)}")
 
     packet_stats = packet_statistics(packets)
     ip_stats = ip_statistics(packets)
