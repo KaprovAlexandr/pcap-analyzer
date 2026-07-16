@@ -308,6 +308,47 @@ def port_scan_detection(packets):
     return suspicious
 
 
+def dns_flood_detection(packets):
+    """
+    Обнаруживает возможный DNS Flood.
+    Один источник отправляет слишком много DNS-запросов.
+    """
+
+    dns_counter = Counter()
+
+    for packet in packets:
+
+        if (
+            packet.haslayer(IP)
+            and packet.haslayer(DNS)
+            and packet.haslayer(DNSQR)
+        ):
+
+            src_ip = packet[IP].src
+            dns_counter[src_ip] += 1
+
+    print("\n===== DNS FLOOD DETECTION =====\n")
+
+    suspicious = {}
+
+    THRESHOLD = 100
+
+    for ip, count in dns_counter.items():
+
+        if count >= THRESHOLD:
+
+            print(f"Источник: {ip}")
+            print(f"DNS-запросов: {count}")
+            print("Возможен DNS Flood\n")
+
+            suspicious[ip] = count
+
+    if not suspicious:
+        print("Признаков DNS Flood не обнаружено.")
+
+    return suspicious
+
+
 def main():
 
     packets = read_pcap(PCAP_PATH)
@@ -322,6 +363,7 @@ def main():
     tcp_flag_statistics(packets)
     suspicious_port_statistics(packets)
     port_scan_detection(packets)
+    dns_flood_detection(packets)
 
 
 if __name__ == "__main__":
