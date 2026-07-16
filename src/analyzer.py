@@ -1,6 +1,6 @@
 from pathlib import Path
 from scapy.all import rdpcap
-from scapy.layers.dns import DNS
+from scapy.layers.dns import DNS, DNSQR
 from scapy.layers.l2 import ARP
 from collections import Counter
 from scapy.layers.inet import IP, TCP, UDP, ICMP
@@ -129,6 +129,36 @@ def port_statistics(packets):
     }
 
 
+
+def dns_statistics(packets):
+    """
+    Подсчитывает количество DNS-запросов.
+    """
+
+    dns_counter = Counter()
+
+    for packet in packets:
+
+        if packet.haslayer(DNS) and packet.haslayer(DNSQR):
+
+            domain = packet[DNSQR].qname.decode(errors="ignore")
+
+            domain = domain.rstrip(".")
+
+            dns_counter[domain] += 1
+
+    print("\n===== DNS REQUESTS =====\n")
+
+    if not dns_counter:
+        print("DNS-запросов не найдено.")
+    else:
+
+        for domain, count in dns_counter.most_common(10):
+            print(f"{domain:<40} -> {count}")
+
+    return dict(dns_counter)
+
+
 def main():
 
     packets = read_pcap(PCAP_PATH)
@@ -139,6 +169,7 @@ def main():
     packet_statistics(packets)
     ip_statistics(packets)
     port_statistics(packets)
+    dns_statistics(packets)
 
 
 if __name__ == "__main__":
