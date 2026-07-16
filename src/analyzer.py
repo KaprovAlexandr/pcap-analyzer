@@ -1,6 +1,5 @@
 from pathlib import Path
 from scapy.all import rdpcap
-from scapy.layers.inet import TCP, UDP, ICMP
 from scapy.layers.dns import DNS
 from scapy.layers.l2 import ARP
 from collections import Counter
@@ -94,6 +93,42 @@ def ip_statistics(packets):
 
 
 
+def port_statistics(packets):
+    """
+    Подсчитывает количество пакетов для TCP и UDP портов.
+    """
+
+    src_ports = Counter()
+    dst_ports = Counter()
+
+    for packet in packets:
+
+        if packet.haslayer(TCP):
+
+            src_ports[packet[TCP].sport] += 1
+            dst_ports[packet[TCP].dport] += 1
+
+        elif packet.haslayer(UDP):
+
+            src_ports[packet[UDP].sport] += 1
+            dst_ports[packet[UDP].dport] += 1
+
+    print("\n===== TOP SOURCE PORTS =====\n")
+
+    for port, count in src_ports.most_common(10):
+        print(f"{port:<8} -> {count}")
+
+    print("\n===== TOP DESTINATION PORTS =====\n")
+
+    for port, count in dst_ports.most_common(10):
+        print(f"{port:<8} -> {count}")
+
+    return {
+        "source_ports": dict(src_ports),
+        "destination_ports": dict(dst_ports)
+    }
+
+
 def main():
 
     packets = read_pcap(PCAP_PATH)
@@ -103,6 +138,7 @@ def main():
 
     packet_statistics(packets)
     ip_statistics(packets)
+    port_statistics(packets)
 
 
 if __name__ == "__main__":
