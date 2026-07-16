@@ -349,6 +349,62 @@ def dns_flood_detection(packets):
     return suspicious
 
 
+def syn_flood_detection(packets):
+    """
+    Обнаруживает возможный TCP SYN Flood.
+    """
+
+    syn_counter = Counter()
+    ack_counter = Counter()
+
+    for packet in packets:
+
+        if (
+            packet.haslayer(IP)
+            and packet.haslayer(TCP)
+        ):
+
+            src_ip = packet[IP].src
+            flags = packet.sprintf("%TCP.flags%")
+
+            if flags == "S":
+                syn_counter[src_ip] += 1
+
+            elif flags == "A":
+                ack_counter[src_ip] += 1
+
+    print("\n===== SYN FLOOD DETECTION =====\n")
+
+    suspicious = {}
+
+    SYN_THRESHOLD = 100
+    RATIO = 5
+
+    for ip, syn_count in syn_counter.items():
+
+        ack_count = ack_counter.get(ip, 0)
+
+        if (
+            syn_count >= SYN_THRESHOLD
+            and syn_count > ack_count * RATIO
+        ):
+
+            print(f"Источник: {ip}")
+            print(f"SYN: {syn_count}")
+            print(f"ACK: {ack_count}")
+            print("Обнаружены признаки TCP SYN Flood\n")
+
+            suspicious[ip] = {
+                "syn": syn_count,
+                "ack": ack_count
+            }
+
+    if not suspicious:
+        print("Признаков TCP SYN Flood не обнаружено.")
+
+    return suspicious
+
+
 def main():
 
     packets = read_pcap(PCAP_PATH)
@@ -364,6 +420,7 @@ def main():
     suspicious_port_statistics(packets)
     port_scan_detection(packets)
     dns_flood_detection(packets)
+    syn_flood_detection(packets)
 
 
 if __name__ == "__main__":
