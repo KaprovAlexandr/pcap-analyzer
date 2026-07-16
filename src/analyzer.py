@@ -1,4 +1,5 @@
 import json
+import argparse
 from pathlib import Path
 from scapy.all import rdpcap
 from scapy.layers.dns import DNS, DNSQR
@@ -8,7 +9,6 @@ from scapy.layers.inet import IP, TCP, UDP, ICMP
 from colorama import init, Fore, Style
 
 
-PCAP_PATH = Path("pcaps/sample.pcapng")
 init(autoreset=True)
 
 def read_pcap(path: Path):
@@ -19,6 +19,26 @@ def read_pcap(path: Path):
     packets = rdpcap(str(path))
 
     return packets
+
+
+
+def parse_arguments():
+    """
+    Обрабатывает аргументы командной строки.
+    """
+
+    parser = argparse.ArgumentParser(
+        description="PCAP Analyzer"
+    )
+
+    parser.add_argument(
+        "-f",
+        "--file",
+        default="pcaps/sample.pcapng",
+        help="Путь к PCAP-файлу"
+    )
+
+    return parser.parse_args()
 
 
 
@@ -449,9 +469,11 @@ def syn_flood_detection(packets):
 
 def main():
 
-    packets = read_pcap(PCAP_PATH)
+    args = parse_arguments()
+    pcap_path = Path(args.file)
+    packets = read_pcap(pcap_path)
 
-    success(f"Файл успешно открыт: {PCAP_PATH}")
+    success(f"Файл успешно открыт: {pcap_path}")
     info(f"Всего пакетов: {len(packets)}")
 
     packet_stats = packet_statistics(packets)
@@ -465,7 +487,7 @@ def main():
     syn_flood = syn_flood_detection(packets)
 
     report = {
-        "pcap_file": str(PCAP_PATH),
+        "pcap_file": str(pcap_path),
         "total_packets": len(packets),
 
         "packet_statistics": packet_stats,
