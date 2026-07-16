@@ -38,6 +38,13 @@ def parse_arguments():
         help="Путь к PCAP-файлу"
     )
 
+    parser.add_argument(
+        "-j",
+        "--json",
+        default="results.json",
+        help="Имя JSON-файла для сохранения результатов"
+    )
+
     return parser.parse_args()
 
 
@@ -502,7 +509,7 @@ def main():
         "syn_flood_detection": syn_flood,
     }
 
-    REPORT_PATH = Path("report.json")
+    REPORT_PATH = Path(args.json)
     export_report(report, REPORT_PATH)
 
 
