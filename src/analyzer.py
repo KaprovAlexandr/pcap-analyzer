@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from scapy.all import rdpcap
 from scapy.layers.dns import DNS, DNSQR
@@ -17,6 +18,23 @@ def read_pcap(path: Path):
     packets = rdpcap(str(path))
 
     return packets
+
+
+
+def export_report(report: dict, output_path: Path):
+    """
+    Экспортирует полный отчет анализа в JSON.
+    """
+
+    with open(output_path, "w", encoding="utf-8") as file:
+        json.dump(
+            report,
+            file,
+            indent=4,
+            ensure_ascii=False
+        )
+
+    print(f"\nJSON отчет сохранен: {output_path}")
 
 
 
@@ -412,15 +430,34 @@ def main():
     print(f"Файл успешно открыт: {PCAP_PATH}")
     print(f"Всего пакетов: {len(packets)}")
 
-    packet_statistics(packets)
-    ip_statistics(packets)
-    port_statistics(packets)
-    dns_statistics(packets)
-    tcp_flag_statistics(packets)
-    suspicious_port_statistics(packets)
-    port_scan_detection(packets)
-    dns_flood_detection(packets)
-    syn_flood_detection(packets)
+    packet_stats = packet_statistics(packets)
+    ip_stats = ip_statistics(packets)
+    port_stats = port_statistics(packets)
+    dns_stats = dns_statistics(packets)
+    tcp_flags = tcp_flag_statistics(packets)
+    suspicious_ports = suspicious_port_statistics(packets)
+    port_scan = port_scan_detection(packets)
+    dns_flood = dns_flood_detection(packets)
+    syn_flood = syn_flood_detection(packets)
+
+    report = {
+        "pcap_file": str(PCAP_PATH),
+        "total_packets": len(packets),
+
+        "packet_statistics": packet_stats,
+        "ip_statistics": ip_stats,
+        "port_statistics": port_stats,
+        "dns_statistics": dns_stats,
+        "tcp_flags": tcp_flags,
+
+        "suspicious_ports": suspicious_ports,
+        "port_scan_detection": port_scan,
+        "dns_flood_detection": dns_flood,
+        "syn_flood_detection": syn_flood,
+    }
+
+    REPORT_PATH = Path("report.json")
+    export_report(report, REPORT_PATH)
 
 
 if __name__ == "__main__":
