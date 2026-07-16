@@ -10,6 +10,7 @@ from colorama import init, Fore, Style
 
 
 init(autoreset=True)
+USE_COLOR = True
 
 def read_pcap(path: Path):
     """
@@ -45,6 +46,12 @@ def parse_arguments():
         help="Имя JSON-файла для сохранения результатов"
     )
 
+    parser.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Отключить цветной вывод"
+    )
+
     return parser.parse_args()
 
 
@@ -66,27 +73,42 @@ def export_report(report: dict, output_path: Path):
 
 
 def info(text):
-    print(Fore.CYAN + text)
+    if USE_COLOR:
+        print(Fore.CYAN + text)
+    else:
+        print(text)
 
 
 def success(text):
-    print(Fore.GREEN + text)
+    if USE_COLOR:
+        print(Fore.GREEN + text)
+    else:
+        print(text)
 
 
 def warning(text):
-    print(Fore.YELLOW + text)
+    if USE_COLOR:
+        print(Fore.YELLOW + text)
+    else:
+        print(text)
 
 
 def danger(text):
-    print(Fore.RED + text)
+    if USE_COLOR:
+        print(Fore.RED + text)
+    else:
+        print(text)
 
 
 def header(text):
-    print(
-        Style.BRIGHT +
-        Fore.MAGENTA +
-        text
-    )
+    if USE_COLOR:
+        print(
+            Style.BRIGHT +
+            Fore.MAGENTA +
+            text
+        )
+    else:
+        print(text)
 
 
 def packet_statistics(packets):
@@ -477,6 +499,10 @@ def syn_flood_detection(packets):
 def main():
 
     args = parse_arguments()
+
+    global USE_COLOR
+    USE_COLOR = not args.no_color
+    
     pcap_path = Path(args.file)
     packets = read_pcap(pcap_path)
 
