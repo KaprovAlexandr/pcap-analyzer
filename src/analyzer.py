@@ -197,6 +197,65 @@ def tcp_flag_statistics(packets):
     return dict(flag_counter)
 
 
+
+def suspicious_port_statistics(packets):
+    """
+    Ищет обращения к потенциально опасным портам.
+    """
+
+    SUSPICIOUS_PORTS = {
+        21: "FTP",
+        22: "SSH",
+        23: "TELNET",
+        25: "SMTP",
+        53: "DNS",
+        80: "HTTP",
+        110: "POP3",
+        135: "MS RPC",
+        139: "NetBIOS",
+        143: "IMAP",
+        443: "HTTPS",
+        445: "SMB",
+        3389: "RDP",
+    }
+
+    port_counter = Counter()
+
+    for packet in packets:
+
+        if packet.haslayer(TCP):
+
+            dst_port = packet[TCP].dport
+
+            if dst_port in SUSPICIOUS_PORTS:
+                port_counter[dst_port] += 1
+
+        elif packet.haslayer(UDP):
+
+            dst_port = packet[UDP].dport
+
+            if dst_port in SUSPICIOUS_PORTS:
+                port_counter[dst_port] += 1
+
+    print("\n===== SUSPICIOUS PORTS =====\n")
+
+    if not port_counter:
+        print("Подозрительные порты не обнаружены.")
+
+    else:
+
+        for port, count in port_counter.most_common():
+
+            service = SUSPICIOUS_PORTS[port]
+
+            print(f"{port:<6} ({service:<10}) -> {count}")
+
+    return {
+        SUSPICIOUS_PORTS[port]: count
+        for port, count in port_counter.items()
+    }
+
+
 def main():
 
     packets = read_pcap(PCAP_PATH)
@@ -209,6 +268,7 @@ def main():
     port_statistics(packets)
     dns_statistics(packets)
     tcp_flag_statistics(packets)
+    suspicious_port_statistics(packets)
 
 
 if __name__ == "__main__":
